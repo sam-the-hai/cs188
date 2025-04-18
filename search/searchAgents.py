@@ -288,6 +288,7 @@ class CornersProblem(search.SearchProblem):
         for corner in self.corners:
             if not startingGameState.hasFood(*corner):
                 print('Warning: no food in corner ' + str(corner))
+        self.startingGameState = startingGameState
         self._expanded = 0 # DO NOT CHANGE; Number of search nodes expanded
 
     def getStartState(self):
@@ -374,15 +375,30 @@ def cornersHeuristic(state: Any, problem: CornersProblem):
     shortest path from the state to a goal of the problem; i.e.  it should be
     admissible.
     """
-    corners = problem.corners # These are the corner coordinates
-    walls = problem.walls # These are the walls of the maze, as a Grid (game.py)
+    corners = problem.corners
+    position, visited_corners = state
 
-    # get the minimum distance to the closest corner
-    min_distance = float('inf')
-    for corner in corners:
-        min_distance = min(min_distance, mazeDistance(state, corner, problem))
+    if all(visited_corners):
+        return 0
+    
+    unvisited_corners = [corners[i] for i in range(len(corners)) if not visited_corners[i]]
+    current_position = position
 
-    return min_distance
+    # Greedy approach - visit the closest corner first, then the next closest, etc.
+    # total_distance = 0
+    # while unvisited_corners:
+    #     # Find the closest unvisited corner
+    #     closet_corner = min(unvisited_corners, key=lambda corner: util.manhattanDistance(current_position, corner))
+    #     total_distance += util.manhattanDistance(current_position, closet_corner)
+
+    #     current_position = closet_corner
+    #     unvisited_corners.remove(closet_corner)
+
+    # return total_distance
+
+    # Simpler approach - find the maximum Manhattan distance to any unvisited corner
+    # This ensures admissibility while still being more informative than just the closest corner
+    return max(util.manhattanDistance(current_position, corner) for corner in unvisited_corners)
 
 
 
@@ -472,8 +488,22 @@ def foodHeuristic(state: Tuple[Tuple, List[List]], problem: FoodSearchProblem):
     problem.heuristicInfo['wallCount']
     """
     position, foodGrid = state
-    "*** YOUR CODE HERE ***"
-    return 0
+    food_list = foodGrid.asList()
+
+    if not food_list:
+        return 0
+    
+    max_distance = max([util.manhattanDistance(position, food) for food in food_list])
+    if len(food_list) > 1:
+        food_distances = []
+        for i in range(len(food_list)):
+            for j in range(i+1, len(food_list)):
+                food_distances.append(util.manhattanDistance(food_list[i], food_list[j]))
+        
+        max_food_distance = max(food_distances) if food_distances else 0
+        return max(max_distance, max_food_distance)
+    
+    return max_distance
 
 
 class ClosestDotSearchAgent(SearchAgent):
@@ -504,8 +534,7 @@ class ClosestDotSearchAgent(SearchAgent):
         walls = gameState.getWalls()
         problem = AnyFoodSearchProblem(gameState)
 
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        return search.breadthFirstSearch(problem)
 
 class AnyFoodSearchProblem(PositionSearchProblem):
     """
@@ -540,8 +569,9 @@ class AnyFoodSearchProblem(PositionSearchProblem):
         """
         x,y = state
 
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        if (x,y) in self.food.asList():
+            return True
+        return False
 
 def mazeDistance(point1: Tuple[int, int], point2: Tuple[int, int], gameState: pacman.GameState) -> int:
     """
