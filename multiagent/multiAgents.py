@@ -183,8 +183,8 @@ class MinimaxAgent(MultiAgentSearchAgent):
         gameState.isLose():
         Returns whether or not the game state is a losing state
         """
-        
-        def minimax(agentIndex, depth, state):
+        # https://en.wikipedia.org/wiki/Minimax
+        def minimax(agentIndex: int, depth: int, state: GameState) -> float:
             if depth == self.depth or state.isWin() or state.isLose():
                 return self.evaluationFunction(state)
 
@@ -221,9 +221,50 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         """
         Returns the minimax action using self.depth and self.evaluationFunction
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
 
+        def alphaBeta(agentIndex: int, depth: int, state: GameState, alpha: float, beta: float) -> tuple[float, str]:
+            if state.isWin() or state.isLose() or depth == self.depth:
+                return self.evaluationFunction(state), None
+
+            numAgents = state.getNumAgents()
+            nextAgent = (agentIndex + 1) % numAgents
+            nextDepth = depth + 1 if nextAgent == 0 else depth
+
+            legalActions = state.getLegalActions(agentIndex)
+            if not legalActions:
+                return self.evaluationFunction(state), None
+
+            if agentIndex == 0:  # Pacman (maximize)
+                value = float('-inf')
+                bestAction = None
+                for action in legalActions:
+                    successor = state.generateSuccessor(agentIndex, action)
+                    score, _ = alphaBeta(nextAgent, nextDepth, successor, alpha, beta)
+                    if score > value:
+                        value = score
+                        bestAction = action
+                    if value > beta:
+                        break  # Beta cutoff
+                    alpha = max(alpha, value)
+                return value, bestAction
+            else:  # Ghosts (minimize)
+                value = float('inf')
+                bestAction = None
+                for action in legalActions:
+                    successor = state.generateSuccessor(agentIndex, action)
+                    score, _ = alphaBeta(nextAgent, nextDepth, successor, alpha, beta)
+                    if score < value:
+                        value = score
+                        bestAction = action
+                    if value < alpha:
+                        break  # Alpha cutoff
+                    beta = min(beta, value)
+                return value, bestAction
+
+        # Pacman is agentIndex = 0
+        _, action = alphaBeta(0, 0, gameState, float('-inf'), float('inf'))
+        return action
+        
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
       Your expectimax agent (question 4)
