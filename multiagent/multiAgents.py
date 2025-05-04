@@ -222,7 +222,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         Returns the minimax action using self.depth and self.evaluationFunction
         """
 
-        def alphaBeta(agentIndex: int, depth: int, state: GameState, alpha: float, beta: float) -> tuple[float, str]:
+        def alphaBeta(agentIndex: int, depth: int, state: GameState, alpha: float, beta: float) -> tuple[float, str | None]:
             if state.isWin() or state.isLose() or depth == self.depth:
                 return self.evaluationFunction(state), None
 
@@ -277,8 +277,38 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         All ghosts should be modeled as choosing uniformly at random from their
         legal moves.
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        def expectimax(agentIndex: int, depth: int, state: GameState) -> tuple[float, str | None]:
+            if depth == self.depth or state.isWin() or state.isLose():
+                return self.evaluationFunction(state), None
+
+            numAgents = state.getNumAgents()
+            nextAgent = (agentIndex + 1) % numAgents
+            nextDepth = depth + 1 if nextAgent == 0 else depth
+
+            legalActions = state.getLegalActions(agentIndex)
+            if not legalActions:
+                return self.evaluationFunction(state), None
+
+            if agentIndex == 0:  # Pacman (maximize)
+                bestScore = float('-inf')
+                bestAction = None
+                for action in legalActions:
+                    value, _ = expectimax(nextAgent, nextDepth, state.generateSuccessor(0, action))
+                    if value > bestScore:
+                        bestScore = value
+                        bestAction = action
+                return bestScore, bestAction
+            else:  # Ghosts (minimize)
+                averageScore = 0
+                for action in legalActions:
+                    value, _ = expectimax(nextAgent, nextDepth, state.generateSuccessor(agentIndex, action)) 
+                    averageScore += value
+                return averageScore, None
+
+        _, action = expectimax(0, 0, gameState)
+        return action
+
+        
 
 def betterEvaluationFunction(currentGameState: GameState):
     """
