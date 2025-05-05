@@ -69,7 +69,6 @@ class ReflexAgent(Agent):
         newPos = successorGameState.getPacmanPosition()
         newFood = successorGameState.getFood()
         newGhostStates = successorGameState.getGhostStates()
-        newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
         
         # Handle the case when there's no food left
         foodList = newFood.asList()
@@ -315,10 +314,77 @@ def betterEvaluationFunction(currentGameState: GameState):
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
     evaluation function (question 5).
 
-    DESCRIPTION: <write something here so we know what you did>
+    DESCRIPTION: 
+    This evaluation function is designed to maximize the score of Pacman by on current game state.
+    - Penalty for being far from the nearest food
+    - Penalty for being close to the non-scared ghost
+    - Bonus for eating food or capsules
+    - Bonus for being close to the scared ghost
     """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    newPos = currentGameState.getPacmanPosition()
+    newFood = currentGameState.getFood()
+    newGhostStates = currentGameState.getGhostStates()
+    
+    # Calculate the distance to the nearest food
+    # Handle the case when there's no food left
+    foodList = newFood.asList()
+    if not foodList:
+        minFoodDistance = 0
+    else:
+        minFoodDistance = min(util.manhattanDistance(newPos, food) for food in foodList)
+        
+    # Calculate the distance to the nearest capsule
+    capsuleList = currentGameState.getCapsules()
+    if not capsuleList:
+        minCapsuleDistance = 0
+    else:
+        minCapsuleDistance = min(util.manhattanDistance(newPos, capsule) for capsule in capsuleList)
+    
+    # Calculate ghost distances
+    ghostDistances = [util.manhattanDistance(newPos, ghostState.getPosition()) for ghostState in newGhostStates]
+    # Handle the case when there are no ghosts
+    if not ghostDistances:
+        minGhostDistance = float('inf')
+    else:
+        minGhostDistance = min(ghostDistances)
+    
+    # Calculate scared ghost bonus
+    scaredGhostBonus = 0
+    for i, ghostState in enumerate(newGhostStates):
+        if ghostState.scaredTimer > 0:
+            # If ghost is scared, we want to be closer to it
+            scaredGhostBonus += 200 / (1 + util.manhattanDistance(newPos, ghostState.getPosition()))
+    
+    # Ghost penalty - avoid non-scared ghosts
+    ghostPenalty = 0
+    for i, ghostState in enumerate(newGhostStates):
+        if ghostState.scaredTimer == 0:
+            if ghostDistances[i] <= 2:
+                # Heavy penalty for being too close to non-scared ghost
+                ghostPenalty = -500 / (ghostDistances[i] + 0.1)
+            else:
+                ghostPenalty = -100 / (ghostDistances[i] + 0.1)
 
+    # Penalty for being far from food
+    # foodDistancePenalty = 0 
+    foodDistancePenalty = -2 * minFoodDistance
+
+    # Penalty for being far from capsules
+    capsuleDistancePenalty = -2 * minCapsuleDistance
+    
+    # Bonus for the number of food, capsules and scared ghosts left
+    foodNumberBonus = 100 / len(foodList) if len(foodList) > 0 else 0
+    capsuleNumberBonus = 200 / len(capsuleList) if len(capsuleList) > 0 else 0
+    scaredGhostNumberBonus = 200 / len(newGhostStates) if len(newGhostStates) > 0 else 0
+    
+    # Calculate final score
+    score = currentGameState.getScore() + foodDistancePenalty + capsuleDistancePenalty + scaredGhostBonus + ghostPenalty + foodNumberBonus + capsuleNumberBonus + scaredGhostNumberBonus
+
+    # General ghost distance factor (only for non-scared ghosts)
+    if minGhostDistance < float('inf'):
+        ghostDistanceFactor = min(50, minGhostDistance) # Cap the bonus
+        score += ghostDistanceFactor
+    
+    return score
 # Abbreviation
 better = betterEvaluationFunction
